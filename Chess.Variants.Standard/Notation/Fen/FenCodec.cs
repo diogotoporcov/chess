@@ -18,6 +18,8 @@ namespace Chess.Variants.Standard.Notation.Fen;
 
 public sealed class FenCodec : INotationCodec<StandardInitialState>
 {
+    private static readonly SquareCodec SquareCodec = new();
+
     public StandardInitialState Parse(
         string notation)
     {
@@ -319,7 +321,6 @@ public sealed class FenCodec : INotationCodec<StandardInitialState>
         }
 
         if (field.Length != 2 ||
-            field[0] is < 'a' or > 'h' ||
             field[1] is not ('3' or '6'))
         {
             throw new FormatException(
@@ -327,10 +328,17 @@ public sealed class FenCodec : INotationCodec<StandardInitialState>
                 "three or six.");
         }
 
-        var column = field[0] - 'a';
-        var row = '8' - field[1];
-
-        return BoardLayout.GetSquare(row, column);
+        try
+        {
+            return SquareCodec.Parse(field);
+        }
+        catch (FormatException exception)
+        {
+            throw new FormatException(
+                "FEN en passant target must be '-' or a square on rank " +
+                "three or six.",
+                exception);
+        }
     }
 
     private static int ParseHalfmoveClock(
@@ -649,16 +657,7 @@ public sealed class FenCodec : INotationCodec<StandardInitialState>
                 "six.");
         }
 
-        var column = BoardLayout.GetColumn(square);
-
-        return string.Create(
-            2,
-            (row, column),
-            static (characters, position) =>
-            {
-                characters[0] = (char)('a' + position.column);
-                characters[1] = (char)('8' - position.row);
-            });
+        return SquareCodec.Format(square);
     }
 
     private static void EnsureStandardSquare(
