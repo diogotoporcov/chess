@@ -9,7 +9,8 @@
                                               IsDesignTimeCreatable=False}">
 
     <Grid Width="{Binding BoardWidth}"
-          Height="{Binding BoardHeight}">
+          Height="{Binding BoardHeight}"
+          IsHitTestVisible="{Binding IsBoardInputEnabled}">
 
         <ItemsControl Width="{Binding BoardWidth}"
                       Height="{Binding BoardHeight}"
@@ -65,8 +66,9 @@
 
                                         <Style.Triggers>
 
-                                            <DataTrigger Binding="{Binding IsSelected}"
-                                                         Value="True">
+                                            <DataTrigger
+                                                Binding="{Binding IsSelected}"
+                                                Value="True">
 
                                                 <Setter Property="Visibility"
                                                         Value="Visible" />
@@ -104,8 +106,9 @@
 
                                         <Style.Triggers>
 
-                                            <DataTrigger Binding="{Binding IsLegalDestination}"
-                                                         Value="True">
+                                            <DataTrigger
+                                                Binding="{Binding IsLegalDestination}"
+                                                Value="True">
 
                                                 <Setter Property="Visibility"
                                                         Value="Visible" />
@@ -137,8 +140,9 @@
 
                                         <Style.Triggers>
 
-                                            <DataTrigger Binding="{Binding IsCaptureDestination}"
-                                                         Value="True">
+                                            <DataTrigger
+                                                Binding="{Binding IsCaptureDestination}"
+                                                Value="True">
 
                                                 <Setter Property="Visibility"
                                                         Value="Visible" />

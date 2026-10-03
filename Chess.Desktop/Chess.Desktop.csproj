@@ -10,6 +10,9 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Chess.Core\Chess.Core.csproj" />
+        <ProjectReference Include="..\Chess.Analysis\Chess.Analysis.csproj" />
+        <ProjectReference Include="..\Chess.Stockfish\Chess.Stockfish.csproj" />
+        <ProjectReference Include="..\Chess.Uci\Chess.Uci.csproj" />
         <ProjectReference
             Include="..\Chess.Variants.Standard\Chess.Variants.Standard.csproj" />
     </ItemGroup>

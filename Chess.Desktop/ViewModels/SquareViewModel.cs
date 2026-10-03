@@ -15,11 +15,27 @@ public sealed class SquareViewModel : ViewModelBase
 
     private bool _isCaptureDestination;
 
+    private double _x;
+
+    private double _y;
+
     public Square Square { get; }
 
-    public double X { get; }
+    public double OriginalX { get; }
 
-    public double Y { get; }
+    public double OriginalY { get; }
+
+    public double X
+    {
+        get => _x;
+        private set => SetProperty(ref _x, value);
+    }
+
+    public double Y
+    {
+        get => _y;
+        private set => SetProperty(ref _y, value);
+    }
 
     public double Size { get; }
 
@@ -78,6 +94,8 @@ public sealed class SquareViewModel : ViewModelBase
         }
 
         Square = square;
+        OriginalX = x;
+        OriginalY = y;
         X = x;
         Y = y;
         Size = size;
@@ -93,5 +111,14 @@ public sealed class SquareViewModel : ViewModelBase
         CaptureMarkerStrokeThickness = size * 0.045;
 
         IsLightSquare = isLightSquare;
+    }
+
+    public void SetOrientation(
+        bool flipped,
+        double boardWidth,
+        double boardHeight)
+    {
+        X = flipped ? boardWidth - OriginalX - Size : OriginalX;
+        Y = flipped ? boardHeight - OriginalY - Size : OriginalY;
     }
 }

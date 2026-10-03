@@ -9,6 +9,7 @@
               <Include>
                 <ModulePath>.*Chess\.Analysis\.dll$</ModulePath>
                 <ModulePath>.*Chess\.Core\.dll$</ModulePath>
+                <ModulePath>.*Chess\.Desktop\.dll$</ModulePath>
                 <ModulePath>.*Chess\.Stockfish\.dll$</ModulePath>
                 <ModulePath>.*Chess\.Uci\.dll$</ModulePath>
                 <ModulePath>.*Chess\.Variants\.Standard\.dll$</ModulePath>

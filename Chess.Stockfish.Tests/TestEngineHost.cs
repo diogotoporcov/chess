@@ -61,13 +61,15 @@ internal sealed class TestEngineHost : IAsyncDisposable
     public StockfishAnalyzerOptions CreateOptions(
         int? threads = null,
         int? hashSizeMiB = null,
+        int? strengthElo = null,
         TimeSpan? responseTimeout = null,
         TimeSpan? shutdownTimeout = null)
     {
         return new StockfishAnalyzerOptions(
             CreateProcessOptions(responseTimeout, shutdownTimeout),
             threads,
-            hashSizeMiB);
+            hashSizeMiB,
+            strengthElo);
     }
 
     public string[] ReadLogLines()

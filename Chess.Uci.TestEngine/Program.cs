@@ -123,6 +123,24 @@ internal static class Program
                                 await SendAsync(logPath, chess960);
                             }
                         }
+
+                        if (scenario != "stockfish no limitstrength")
+                        {
+                            await SendAsync(
+                                logPath,
+                                scenario == "stockfish malformed limitstrength"
+                                    ? "option name UCI_LimitStrength type check default maybe"
+                                    : "option name UCI_LimitStrength type check default false");
+                        }
+
+                        if (scenario != "stockfish no elo")
+                        {
+                            await SendAsync(
+                                logPath,
+                                scenario == "stockfish malformed elo"
+                                    ? "option name UCI_Elo type spin default 1320 min nope max 3190"
+                                    : "option name UCI_Elo type spin default 1320 min 1320 max 3190");
+                        }
                     }
 
                     await SendAsync(logPath, "uciok");

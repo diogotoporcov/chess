@@ -52,6 +52,15 @@ public static class Variant
             .CreateGame();
     }
 
+    public static StandardPositionFactsEvaluator CreatePositionFactsEvaluator(
+        StandardInitialState initialState)
+    {
+        ArgumentNullException.ThrowIfNull(initialState);
+
+        return CreateComponents(initialState)
+            .FactsEvaluator;
+    }
+
     private static VariantComponents CreateComponents(
         StandardInitialState initialState)
     {

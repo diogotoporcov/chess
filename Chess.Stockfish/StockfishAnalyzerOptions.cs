@@ -13,10 +13,13 @@ public sealed record StockfishAnalyzerOptions
 
     public int? HashSizeMiB { get; }
 
+    public int? StrengthElo { get; }
+
     public StockfishAnalyzerOptions(
         UciEngineProcessOptions processOptions,
         int? threads = null,
-        int? hashSizeMiB = null)
+        int? hashSizeMiB = null,
+        int? strengthElo = null)
     {
         ArgumentNullException.ThrowIfNull(processOptions);
         if (threads is <= 0)
@@ -32,5 +35,6 @@ public sealed record StockfishAnalyzerOptions
         ProcessOptions = processOptions;
         Threads = threads;
         HashSizeMiB = hashSizeMiB;
+        StrengthElo = strengthElo;
     }
 }

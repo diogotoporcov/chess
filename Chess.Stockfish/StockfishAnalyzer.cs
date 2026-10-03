@@ -59,6 +59,18 @@ public sealed class StockfishAnalyzer :
             StockfishSpinOption? hash = options.HashSizeMiB is null
                 ? null
                 : StockfishSpinOption.Require(engine.Info.OptionLines, "Hash");
+            StockfishSpinOption? elo = options.StrengthElo is null
+                ? null
+                : StockfishSpinOption.Require(
+                    engine.Info.OptionLines,
+                    "UCI_Elo");
+            if (elo is not null)
+            {
+                StockfishCheckOption.Require(
+                    engine.Info.OptionLines,
+                    "UCI_LimitStrength");
+            }
+
             if (options.Threads is { } threadCount)
             {
                 threads!.Value.Validate(threadCount, nameof(options.Threads));
@@ -67,6 +79,11 @@ public sealed class StockfishAnalyzer :
             if (options.HashSizeMiB is { } hashSize)
             {
                 hash!.Value.Validate(hashSize, nameof(options.HashSizeMiB));
+            }
+
+            if (options.StrengthElo is { } strengthElo)
+            {
+                elo!.Value.Validate(strengthElo, nameof(options.StrengthElo));
             }
 
             await engine.SetOptionAsync(
@@ -86,6 +103,18 @@ public sealed class StockfishAnalyzer :
                 await engine.SetOptionAsync(
                     "Hash",
                     configuredHash.ToString(CultureInfo.InvariantCulture),
+                    cancellationToken);
+            }
+
+            if (options.StrengthElo is { } configuredElo)
+            {
+                await engine.SetOptionAsync(
+                    "UCI_Elo",
+                    configuredElo.ToString(CultureInfo.InvariantCulture),
+                    cancellationToken);
+                await engine.SetOptionAsync(
+                    "UCI_LimitStrength",
+                    "true",
                     cancellationToken);
             }
 

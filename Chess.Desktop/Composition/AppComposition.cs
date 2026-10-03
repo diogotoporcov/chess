@@ -15,6 +15,9 @@ public static class AppComposition
 
         var catalog = new GameModeCatalog(providers);
 
-        return new ShellViewModel(catalog);
+        return new ShellViewModel(
+            catalog,
+            new StandardEngineSessionFactory(),
+            new WindowsStockfishExecutablePicker());
     }
 }

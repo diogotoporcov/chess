@@ -1,6 +1,12 @@
 <UserControl x:Class="Chess.Desktop.Views.Components.GameInfoPanelView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:Chess.Desktop.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=viewModels:GameViewModel,
+                                              IsDesignTimeCreatable=False}">
 
     <StackPanel>
 
@@ -15,6 +21,20 @@
                    Foreground="{StaticResource TextPrimaryBrush}"
                    FontSize="18"
                    TextWrapping="Wrap" />
+
+        <TextBlock Text="Play" Margin="0,18,0,4"
+                   Foreground="{StaticResource TextSecondaryBrush}" />
+        <TextBlock Text="{Binding PlayDescription}"
+                   Foreground="{StaticResource TextPrimaryBrush}" />
+        <StackPanel Margin="0,10,0,0"
+                    Visibility="{Binding IsStockfishGame, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <TextBlock
+                Text="{Binding HumanDescription, StringFormat=Human: {0}}"
+                Foreground="{StaticResource TextPrimaryBrush}" />
+            <TextBlock
+                Text="{Binding DifficultyDescription, StringFormat=Difficulty: {0}}"
+                Foreground="{StaticResource TextPrimaryBrush}" />
+        </StackPanel>
 
         <Border Height="1"
                 Margin="0,20,0,20"
@@ -40,6 +60,20 @@
                    Foreground="{StaticResource TextPrimaryBrush}"
                    FontSize="17"
                    TextWrapping="Wrap" />
+
+        <TextBlock Text="Engine" Margin="0,20,0,5"
+                   Foreground="{StaticResource TextSecondaryBrush}" />
+        <TextBlock Text="{Binding EngineStatus}"
+                   Foreground="{StaticResource TextPrimaryBrush}" />
+        <TextBlock Text="{Binding EvaluationError}" TextWrapping="Wrap"
+                   Foreground="{StaticResource ErrorTextBrush}"
+                   Margin="0,8,0,0" />
+        <TextBlock Text="{Binding OpponentError}" TextWrapping="Wrap"
+                   Foreground="{StaticResource ErrorTextBrush}"
+                   Margin="0,8,0,0" />
+        <Button Content="Flip Board" Command="{Binding FlipBoardCommand}"
+                Style="{StaticResource SetupButtonStyle}"
+                HorizontalAlignment="Left" Margin="0,24,0,0" />
 
     </StackPanel>
 

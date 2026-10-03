@@ -12,12 +12,19 @@
                 <ResourceDictionary Source="Themes/Controls.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
+            <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+
             <DataTemplate DataType="{x:Type viewModels:ModeSelectionViewModel}">
                 <screens:ModeSelectionView />
             </DataTemplate>
 
             <DataTemplate DataType="{x:Type viewModels:GameViewModel}">
                 <screens:GameView />
+            </DataTemplate>
+
+            <DataTemplate
+                DataType="{x:Type viewModels:StandardGameSetupViewModel}">
+                <screens:StandardGameSetupView />
             </DataTemplate>
 
         </ResourceDictionary>
