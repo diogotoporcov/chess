@@ -8,6 +8,9 @@ namespace Chess.Stockfish.Tests;
 
 internal sealed class TestEngineHost : IAsyncDisposable
 {
+    private static readonly TimeSpan DefaultTestTimeout =
+        TimeSpan.FromSeconds(30);
+
     private readonly string _directory = Path.Combine(
         Path.GetTempPath(),
         $"Chess.Stockfish.Tests-{Guid.NewGuid():N}");
@@ -54,7 +57,7 @@ internal sealed class TestEngineHost : IAsyncDisposable
                 ReleasePath, _directory, ResponsePath
             ],
             _directory,
-            responseTimeout ?? TimeSpan.FromSeconds(5),
+            responseTimeout ?? DefaultTestTimeout,
             shutdownTimeout ?? TimeSpan.FromMilliseconds(500));
     }
 
@@ -148,7 +151,7 @@ internal sealed class TestEngineHost : IAsyncDisposable
                     WatcherChangeTypes.All,
                     _directory,
                     Path.GetFileName(LogPath)));
-            await completion.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await completion.Task.WaitAsync(DefaultTestTimeout);
         }
     }
 

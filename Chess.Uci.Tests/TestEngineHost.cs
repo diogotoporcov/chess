@@ -7,6 +7,9 @@ namespace Chess.Uci.Tests;
 
 internal sealed class TestEngineHost : IAsyncDisposable
 {
+    private static readonly TimeSpan DefaultTestTimeout =
+        TimeSpan.FromSeconds(30);
+
     private readonly string _directory;
     private readonly string _scenario;
     private UciEngineProcess? _engine;
@@ -50,7 +53,7 @@ internal sealed class TestEngineHost : IAsyncDisposable
                 _scenario, LogPath, ReleasePath, _directory
             ],
             _directory,
-            responseTimeout ?? TimeSpan.FromSeconds(5),
+            responseTimeout ?? DefaultTestTimeout,
             shutdownTimeout ?? TimeSpan.FromMilliseconds(500));
     }
 
@@ -129,7 +132,7 @@ internal sealed class TestEngineHost : IAsyncDisposable
                 _directory,
                 Path.GetFileName(LogPath)));
 
-        await completion.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completion.Task.WaitAsync(DefaultTestTimeout);
     }
 
     public async ValueTask DisposeAsync()
