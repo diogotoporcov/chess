@@ -4,6 +4,9 @@
   <Project Path="Chess.Core/Chess.Core.csproj" />
   <Project Path="Chess.Core.Tests/Chess.Core.Tests.csproj" />
   <Project Path="Chess.Desktop/Chess.Desktop.csproj" />
+  <Project Path="Chess.Uci/Chess.Uci.csproj" />
+  <Project Path="Chess.Uci.TestEngine/Chess.Uci.TestEngine.csproj" />
+  <Project Path="Chess.Uci.Tests/Chess.Uci.Tests.csproj" />
   <Project Path="Chess.Variants.Standard/Chess.Variants.Standard.csproj" />
   <Project Path="Chess.Variants.Standard.Tests/Chess.Variants.Standard.Tests.csproj" />
 </Solution>
