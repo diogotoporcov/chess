@@ -24,6 +24,10 @@ internal static class Program
         var expectedWorkingDirectory = arguments.Length > 3
             ? arguments[3]
             : null;
+        var responsePath = arguments.Length > 4 ? arguments[4] : null;
+        var stockfishScenario = scenario.StartsWith(
+            "stockfish",
+            StringComparison.Ordinal);
         if (expectedWorkingDirectory is not null &&
             Path.GetFullPath(Environment.CurrentDirectory) !=
             Path.GetFullPath(expectedWorkingDirectory))
@@ -33,6 +37,7 @@ internal static class Program
 
         var searchCount = 0;
         var waitingForStop = false;
+        var multiPv = 1;
 
         while (await Console.In.ReadLineAsync() is { } command)
         {
@@ -70,12 +75,39 @@ internal static class Program
                     await SendAsync(logPath, "info string initializing");
                     await SendAsync(logPath, "id name Chess Fake UCI Engine");
                     await SendAsync(logPath, "id author Chess.Tests");
-                    await SendAsync(
-                        logPath,
-                        "option name Hash type spin default 16 min 1 max 1024");
+                    if (scenario != "stockfish no hash")
+                    {
+                        await SendAsync(
+                            logPath,
+                            "option name Hash type spin default 16 min 1 max 1024");
+                    }
+
                     await SendAsync(
                         logPath,
                         "option name Clear Hash type button");
+                    if (stockfishScenario)
+                    {
+                        if (scenario != "stockfish no threads")
+                        {
+                            await SendAsync(
+                                logPath,
+                                "option name Threads type spin default 1 min 1 max 8");
+                        }
+
+                        if (scenario != "stockfish no multipv")
+                        {
+                            await SendAsync(
+                                logPath,
+                                scenario == "stockfish malformed multipv"
+                                    ? "option name MultiPV type spin default 1 min nope max 5"
+                                    : "option name MultiPV type spin default 1 min 1 max 5");
+                        }
+
+                        await SendAsync(
+                            logPath,
+                            "option name UCI_Chess960 type check default false");
+                    }
+
                     await SendAsync(logPath, "uciok");
                     if (scenario == "pause search input" &&
                         releasePath is not null)
@@ -117,6 +149,48 @@ internal static class Program
 
             if (command.StartsWith("go ", StringComparison.Ordinal))
             {
+                if (stockfishScenario)
+                {
+                    searchCount++;
+                    if (scenario == "stockfish wait for stop" &&
+                        searchCount == 1)
+                    {
+                        waitingForStop = true;
+                        continue;
+                    }
+
+                    if (scenario == "stockfish held first" &&
+                        searchCount == 1 &&
+                        releasePath is not null)
+                    {
+                        await LogAsync(logPath, "EVENT first-search-held");
+                        await WaitForFileAsync(releasePath);
+                    }
+
+                    if (responsePath is not null &&
+                        File.Exists(responsePath))
+                    {
+                        foreach (var line in await File.ReadAllLinesAsync(
+                                     responsePath))
+                        {
+                            await SendAsync(logPath, line);
+                        }
+                    }
+                    else
+                    {
+                        for (var rank = 1; rank <= multiPv; rank++)
+                        {
+                            await SendAsync(
+                                logPath,
+                                $"info depth 1 multipv {rank} score cp {rank} pv e2e4");
+                        }
+
+                        await SendAsync(logPath, "bestmove e2e4");
+                    }
+
+                    continue;
+                }
+
                 if (scenario == "exit on search")
                 {
                     await Console.Error.WriteLineAsync("fatal-search-message");
@@ -191,6 +265,13 @@ internal static class Program
 
             if (command == "stop" && waitingForStop)
             {
+                if (stockfishScenario)
+                {
+                    waitingForStop = false;
+                    await SendAsync(logPath, "bestmove e2e4");
+                    continue;
+                }
+
                 if (scenario == "ignore stop")
                 {
                     continue;
@@ -210,6 +291,17 @@ internal static class Program
 
                 await LogAsync(logPath, "EVENT graceful-exit");
                 return 0;
+            }
+
+            if (stockfishScenario &&
+                command.StartsWith(
+                    "setoption name MultiPV value ",
+                    StringComparison.Ordinal) &&
+                int.TryParse(
+                    command["setoption name MultiPV value ".Length..],
+                    out var requestedMultiPv))
+            {
+                multiPv = requestedMultiPv;
             }
         }
 

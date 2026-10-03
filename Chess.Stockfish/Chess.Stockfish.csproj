@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Chess.Analysis\Chess.Analysis.csproj" />
+        <ProjectReference Include="..\Chess.Uci\Chess.Uci.csproj" />
+        <ProjectReference
+            Include="..\Chess.Variants.Standard\Chess.Variants.Standard.csproj" />
+    </ItemGroup>
+
+</Project>
