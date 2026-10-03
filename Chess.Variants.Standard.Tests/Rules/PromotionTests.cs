@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 using Chess.Core.Games;
+using Chess.Core.Games.Status;
 using Chess.Core.Movement;
 using Chess.Core.Pieces;
+using Chess.Variants.Standard.Games;
 using Chess.Variants.Standard.Movement;
 using Chess.Variants.Standard.Pieces;
 using Chess.Variants.Standard.Sides;
@@ -101,6 +103,46 @@ public sealed class PromotionTests
         snapshot.AssertMatches(game);
     }
 
+    [Fact]
+    public void PromotionEffectCanImmediatelyCheckmate()
+    {
+        var game = TestSupport.CreateGame(
+            TestSupport.At("f7", SideDefinitions.White, PieceDefinitions.King),
+            TestSupport.At(
+                "c2",
+                SideDefinitions.White,
+                PieceDefinitions.Bishop),
+            TestSupport.At("e7", SideDefinitions.White, PieceDefinitions.Pawn),
+            TestSupport.At("h8", SideDefinitions.Black, PieceDefinitions.King));
+
+        Assert.Equal(StatusDefinitions.Active, game.Status.Id);
+
+        TestSupport.Play(game, "e7", "e8", PromotionOptions.Queen);
+
+        Assert.Equal(StatusDefinitions.Checkmate, game.Status.Id);
+        Assert.Equal(
+            TerminationDefinitions.Checkmate,
+            Assert.IsType<GameOutcome>(game.Outcome)
+                .Termination);
+    }
+
+    [Fact]
+    public void KnightUnderpromotionImmediatelyUsesKnightAttacks()
+    {
+        var knightGame = CreateImmediateEffectGame();
+        var queenGame = CreateImmediateEffectGame();
+
+        TestSupport.Play(knightGame, "g7", "g8", PromotionOptions.Knight);
+        TestSupport.Play(queenGame, "g7", "g8", PromotionOptions.Queen);
+
+        Assert.Same(
+            PieceDefinitions.Knight,
+            TestSupport.PieceAt(knightGame, "g8")
+                .Definition);
+        Assert.Equal(StatusDefinitions.Check, knightGame.Status.Id);
+        Assert.Equal(StatusDefinitions.Active, queenGame.Status.Id);
+    }
+
     private static Game CreatePromotionGame()
     {
         return TestSupport.CreateGame(
@@ -108,6 +150,14 @@ public sealed class PromotionTests
             TestSupport.At("e8", SideDefinitions.Black, PieceDefinitions.King),
             TestSupport.At("a7", SideDefinitions.White, PieceDefinitions.Pawn),
             TestSupport.At("b8", SideDefinitions.Black, PieceDefinitions.Rook));
+    }
+
+    private static Game CreateImmediateEffectGame()
+    {
+        return TestSupport.CreateGame(
+            TestSupport.At("a1", SideDefinitions.White, PieceDefinitions.King),
+            TestSupport.At("g7", SideDefinitions.White, PieceDefinitions.Pawn),
+            TestSupport.At("h6", SideDefinitions.Black, PieceDefinitions.King));
     }
 
     private static void AssertPromotionOptions(

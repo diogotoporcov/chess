@@ -72,6 +72,65 @@ public sealed class CheckAndStatusTests
     }
 
     [Fact]
+    public void PinnedPieceStillAttacksAndRestrictsTheOpposingKing()
+    {
+        Placement[] placements =
+        [
+            TestSupport.At(
+                "c4",
+                SideDefinitions.White,
+                PieceDefinitions.King),
+            TestSupport.At(
+                "e1",
+                SideDefinitions.White,
+                PieceDefinitions.Rook),
+            TestSupport.At(
+                "e8",
+                SideDefinitions.Black,
+                PieceDefinitions.King),
+            TestSupport.At(
+                "e7",
+                SideDefinitions.Black,
+                PieceDefinitions.Knight)
+        ];
+        var pinnedSideToMove = TestSupport.CreateGame(
+            SideDefinitions.Black,
+            placements);
+        var opposingKingToMove = TestSupport.CreateGame(placements);
+        var attackGenerator = new PatternAttackGenerator();
+
+        Assert.DoesNotContain(
+            Move("e7", "d5"),
+            pinnedSideToMove.GenerateMoves(TestSupport.Square("e7")));
+        Assert.True(
+            attackGenerator.IsSquareAttacked(
+                opposingKingToMove.State,
+                TestSupport.Square("d5"),
+                SideDefinitions.Black));
+        Assert.DoesNotContain(
+            Move("c4", "d5"),
+            opposingKingToMove.GenerateMoves(TestSupport.Square("c4")));
+    }
+
+    [Fact]
+    public void KingsCannotMoveAdjacentAndStillAttackAdjacentSquares()
+    {
+        var game = TestSupport.CreateGame(
+            TestSupport.At("c3", SideDefinitions.White, PieceDefinitions.King),
+            TestSupport.At("e3", SideDefinitions.Black, PieceDefinitions.King));
+        var attackGenerator = new PatternAttackGenerator();
+
+        Assert.True(
+            attackGenerator.IsSquareAttacked(
+                game.State,
+                TestSupport.Square("d3"),
+                SideDefinitions.Black));
+        Assert.DoesNotContain(
+            Move("c3", "d3"),
+            game.GenerateMoves(TestSupport.Square("c3")));
+    }
+
+    [Fact]
     public void KingCannotMoveIntoAnAttackedSquare()
     {
         var game = TestSupport.CreateGame(
@@ -117,6 +176,53 @@ public sealed class CheckAndStatusTests
         Assert.Contains(
             Move("f1", "e2"),
             game.GenerateMoves(TestSupport.Square("f1")));
+    }
+
+    [Fact]
+    public void NonKingPieceCanCaptureTheOnlyChecker()
+    {
+        var game = CreateKnightCheckGame(hasSecondCheckingLine: false);
+
+        Assert.Equal(StatusDefinitions.Check, game.Status.Id);
+        Assert.Contains(
+            Move("g2", "f3"),
+            game.GenerateMoves(TestSupport.Square("g2")));
+    }
+
+    [Fact]
+    public void CapturingOneCheckerIsIllegalWhenAnotherLineRemains()
+    {
+        var game = CreateKnightCheckGame(hasSecondCheckingLine: true);
+
+        Assert.Equal(StatusDefinitions.Check, game.Status.Id);
+        Assert.DoesNotContain(
+            Move("g2", "f3"),
+            game.GenerateMoves(TestSupport.Square("g2")));
+    }
+
+    [Fact]
+    public void DoubleCheckAllowsOnlyKingMoves()
+    {
+        var game = TestSupport.CreateGame(
+            TestSupport.At("e1", SideDefinitions.White, PieceDefinitions.King),
+            TestSupport.At(
+                "g1",
+                SideDefinitions.White,
+                PieceDefinitions.Knight),
+            TestSupport.At("a8", SideDefinitions.Black, PieceDefinitions.King),
+            TestSupport.At("e8", SideDefinitions.Black, PieceDefinitions.Rook),
+            TestSupport.At(
+                "b4",
+                SideDefinitions.Black,
+                PieceDefinitions.Bishop));
+        var moves = TestSupport.AllMoves(game);
+
+        Assert.Equal(StatusDefinitions.Check, game.Status.Id);
+        Assert.NotEmpty(moves);
+        Assert.Empty(game.GenerateMoves(TestSupport.Square("g1")));
+        Assert.All(
+            moves,
+            move => Assert.Equal(TestSupport.Square("e1"), move.From));
     }
 
     [Fact]
@@ -220,6 +326,41 @@ public sealed class CheckAndStatusTests
         string to)
     {
         return new Move(TestSupport.Square(from), TestSupport.Square(to));
+    }
+
+    private static Game CreateKnightCheckGame(
+        bool hasSecondCheckingLine)
+    {
+        var placements = new List<Placement>
+        {
+            TestSupport.At(
+                "e1",
+                SideDefinitions.White,
+                PieceDefinitions.King),
+            TestSupport.At(
+                "g2",
+                SideDefinitions.White,
+                PieceDefinitions.Pawn),
+            TestSupport.At(
+                "a8",
+                SideDefinitions.Black,
+                PieceDefinitions.King),
+            TestSupport.At(
+                "f3",
+                SideDefinitions.Black,
+                PieceDefinitions.Knight)
+        };
+
+        if (hasSecondCheckingLine)
+        {
+            placements.Add(
+                TestSupport.At(
+                    "e8",
+                    SideDefinitions.Black,
+                    PieceDefinitions.Rook));
+        }
+
+        return TestSupport.CreateGame([.. placements]);
     }
 
     private static PieceDefinition ResolveDefinition(

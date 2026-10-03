@@ -112,6 +112,21 @@ public sealed class StandardHalfmoveRuleEvaluatorTests
     }
 
     [Fact]
+    public void PawnMoveAfterNinetyNineHalfmovesDoesNotReachThreshold()
+    {
+        var game = CreateLongHistoryGame(
+            TestSupport.At("a7", SideDefinitions.Black, PieceDefinitions.Pawn));
+        AccumulateNinetyNineQuietMoves(game);
+        var move = TestSupport.FindMove(game, "a7", "a6");
+        var snapshot = StandardGameSnapshot.Capture(game);
+
+        Assert.False(
+            CreateEvaluator(game)
+                .WouldReachFiftyMoveThreshold(game.State, move));
+        snapshot.AssertMatches(game);
+    }
+
+    [Fact]
     public void PromotionAfterNinetyNineHalfmovesDoesNotReachThreshold()
     {
         var game = CreateLongHistoryGame(
@@ -129,7 +144,7 @@ public sealed class StandardHalfmoveRuleEvaluatorTests
     }
 
     [Fact]
-    public void EnPassantDoesNotReachThreshold()
+    public void EnPassantResetsEvenAHypotheticalNinetyNineHalfmoveClock()
     {
         var game = Variant.CreateGame();
         TestSupport.Play(game, "e2", "e4");
@@ -145,6 +160,11 @@ public sealed class StandardHalfmoveRuleEvaluatorTests
         Assert.False(
             CreateEvaluator(game)
                 .WouldReachFiftyMoveThreshold(game.State, move));
+
+        var execution = game.Execute(move)
+            .Execution;
+
+        Assert.Equal(0, StandardHalfmoveRules.GetNextClock(99, execution));
     }
 
     [Fact]

@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Diogo Losacco Toporcov
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+using Chess.Core.Games.Attacks;
 using Chess.Core.Movement;
 using Chess.Variants.Standard.Pieces;
 using Chess.Variants.Standard.Sides;
@@ -48,6 +49,36 @@ public sealed class PawnTests
         Assert.DoesNotContain(Move("d4", "c5"), moves);
         Assert.DoesNotContain(Move("d4", "e5"), moves);
         Assert.DoesNotContain(Move("d4", "d5"), moves);
+    }
+
+    [Fact]
+    public void PawnAttacksEmptyDiagonalsButNotItsForwardSquare()
+    {
+        var game = TestSupport.CreateGame(
+            SideDefinitions.Black,
+            TestSupport.At("h1", SideDefinitions.White, PieceDefinitions.King),
+            TestSupport.At("d4", SideDefinitions.White, PieceDefinitions.Pawn),
+            TestSupport.At("c6", SideDefinitions.Black, PieceDefinitions.King));
+        var attackGenerator = new PatternAttackGenerator();
+
+        Assert.True(
+            attackGenerator.IsSquareAttacked(
+                game.State,
+                TestSupport.Square("c5"),
+                SideDefinitions.White));
+        Assert.True(
+            attackGenerator.IsSquareAttacked(
+                game.State,
+                TestSupport.Square("e5"),
+                SideDefinitions.White));
+        Assert.False(
+            attackGenerator.IsSquareAttacked(
+                game.State,
+                TestSupport.Square("d5"),
+                SideDefinitions.White));
+        Assert.DoesNotContain(
+            Move("c6", "c5"),
+            game.GenerateMoves(TestSupport.Square("c6")));
     }
 
     [Theory]

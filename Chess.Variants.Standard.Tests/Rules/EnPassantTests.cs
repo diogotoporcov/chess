@@ -3,7 +3,9 @@
 
 using Chess.Core.Games;
 using Chess.Core.Movement;
+using Chess.Variants.Standard.Games;
 using Chess.Variants.Standard.Movement;
+using Chess.Variants.Standard.Notation.Fen;
 using Chess.Variants.Standard.Pieces;
 using Chess.Variants.Standard.Sides;
 
@@ -81,6 +83,26 @@ public sealed class EnPassantTests
                 TestSupport.Square("d6"),
                 MoveOptions.EnPassant),
             game.GenerateMoves(TestSupport.Square("e5")));
+    }
+
+    [Fact]
+    public void EnPassantCanRemoveTheCheckingPawn()
+    {
+        var initialState = new FenCodec().Parse(
+            "k7/8/8/3pP3/4K3/8/8/8 w - d6 0 1");
+        var game = Variant.CreateGame(initialState);
+        var move = new Move(
+            TestSupport.Square("e5"),
+            TestSupport.Square("d6"),
+            MoveOptions.EnPassant);
+
+        Assert.Equal(StatusDefinitions.Check, game.Status.Id);
+        Assert.Contains(move, game.GenerateMoves(TestSupport.Square("e5")));
+
+        game.Execute(move);
+
+        Assert.False(game.BoardState.IsOccupied(TestSupport.Square("d5")));
+        Assert.Equal(StatusDefinitions.Active, game.Status.Id);
     }
 
     [Fact]

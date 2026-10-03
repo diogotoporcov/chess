@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 using Chess.Core.Games;
-using Chess.Variants.Standard.Pieces;
-using Chess.Variants.Standard.Sides;
+using Chess.Variants.Standard.Notation.Fen;
 
 namespace Chess.Variants.Standard.Tests.Perft;
 
@@ -18,7 +17,8 @@ public sealed class PerftTests
         int depth,
         long expectedNodes)
     {
-        var game = Variant.CreateGame();
+        var game = CreatePerftGame(
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR " + "w KQkq - 0 1");
 
         Assert.Equal(expectedNodes, CountNodes(game, depth));
     }
@@ -27,14 +27,26 @@ public sealed class PerftTests
     [Trait("Category", "Slow")]
     public void InitialPosition_Depth4MatchesCanonicalCount()
     {
-        Assert.Equal(197_281, CountNodes(Variant.CreateGame(), 4));
+        Assert.Equal(
+            197_281,
+            CountNodes(
+                CreatePerftGame(
+                    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/" +
+                    "RNBQKBNR w KQkq - 0 1"),
+                4));
     }
 
     [Fact(Explicit = true)]
     [Trait("Category", "Manual")]
     public void InitialPosition_Depth5MatchesCanonicalCount()
     {
-        Assert.Equal(4_865_609, CountNodes(Variant.CreateGame(), 5));
+        Assert.Equal(
+            4_865_609,
+            CountNodes(
+                CreatePerftGame(
+                    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/" +
+                    "RNBQKBNR w KQkq - 0 1"),
+                5));
     }
 
     [Theory]
@@ -61,6 +73,63 @@ public sealed class PerftTests
         Assert.Equal(4_085_603, CountNodes(CreateKiwipete(), 4));
     }
 
+    [Theory]
+    [InlineData(1, 14L)]
+    [InlineData(2, 191L)]
+    [InlineData(3, 2_812L)]
+    public void Position3_NormalDepthsMatchCanonicalCounts(
+        int depth,
+        long expectedNodes)
+    {
+        var game = CreatePerftGame("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1");
+
+        Assert.Equal(expectedNodes, CountNodes(game, depth));
+    }
+
+    [Theory]
+    [InlineData(1, 6L)]
+    [InlineData(2, 264L)]
+    [InlineData(3, 9_467L)]
+    public void Position4_NormalDepthsMatchCanonicalCounts(
+        int depth,
+        long expectedNodes)
+    {
+        var game = CreatePerftGame(
+            "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/" +
+            "R2Q1RK1 w kq - 0 1");
+
+        Assert.Equal(expectedNodes, CountNodes(game, depth));
+    }
+
+    [Theory]
+    [InlineData(1, 44L)]
+    [InlineData(2, 1_486L)]
+    [InlineData(3, 62_379L)]
+    public void Position5_NormalDepthsMatchCanonicalCounts(
+        int depth,
+        long expectedNodes)
+    {
+        var game = CreatePerftGame(
+            "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/" + "RNBQK2R w KQ - 1 8");
+
+        Assert.Equal(expectedNodes, CountNodes(game, depth));
+    }
+
+    [Theory]
+    [InlineData(1, 46L)]
+    [InlineData(2, 2_079L)]
+    [InlineData(3, 89_890L)]
+    public void Position6_NormalDepthsMatchCanonicalCounts(
+        int depth,
+        long expectedNodes)
+    {
+        var game = CreatePerftGame(
+            "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/" +
+            "1PP1QPPP/R4RK1 w - - 0 10");
+
+        Assert.Equal(expectedNodes, CountNodes(game, depth));
+    }
+
     private static long CountNodes(
         Game game,
         int depth)
@@ -85,62 +154,16 @@ public sealed class PerftTests
 
     private static Game CreateKiwipete()
     {
-        return TestSupport.CreateGame(
-            TestSupport.At("a8", SideDefinitions.Black, PieceDefinitions.Rook),
-            TestSupport.At("e8", SideDefinitions.Black, PieceDefinitions.King),
-            TestSupport.At("h8", SideDefinitions.Black, PieceDefinitions.Rook),
-            TestSupport.At("a7", SideDefinitions.Black, PieceDefinitions.Pawn),
-            TestSupport.At("c7", SideDefinitions.Black, PieceDefinitions.Pawn),
-            TestSupport.At("d7", SideDefinitions.Black, PieceDefinitions.Pawn),
-            TestSupport.At("e7", SideDefinitions.Black, PieceDefinitions.Queen),
-            TestSupport.At("f7", SideDefinitions.Black, PieceDefinitions.Pawn),
-            TestSupport.At(
-                "g7",
-                SideDefinitions.Black,
-                PieceDefinitions.Bishop),
-            TestSupport.At(
-                "a6",
-                SideDefinitions.Black,
-                PieceDefinitions.Bishop),
-            TestSupport.At(
-                "b6",
-                SideDefinitions.Black,
-                PieceDefinitions.Knight),
-            TestSupport.At("e6", SideDefinitions.Black, PieceDefinitions.Pawn),
-            TestSupport.At(
-                "f6",
-                SideDefinitions.Black,
-                PieceDefinitions.Knight),
-            TestSupport.At("g6", SideDefinitions.Black, PieceDefinitions.Pawn),
-            TestSupport.At("b4", SideDefinitions.Black, PieceDefinitions.Pawn),
-            TestSupport.At("d5", SideDefinitions.White, PieceDefinitions.Pawn),
-            TestSupport.At(
-                "e5",
-                SideDefinitions.White,
-                PieceDefinitions.Knight),
-            TestSupport.At("e4", SideDefinitions.White, PieceDefinitions.Pawn),
-            TestSupport.At(
-                "c3",
-                SideDefinitions.White,
-                PieceDefinitions.Knight),
-            TestSupport.At("f3", SideDefinitions.White, PieceDefinitions.Queen),
-            TestSupport.At("h3", SideDefinitions.Black, PieceDefinitions.Pawn),
-            TestSupport.At("a2", SideDefinitions.White, PieceDefinitions.Pawn),
-            TestSupport.At("b2", SideDefinitions.White, PieceDefinitions.Pawn),
-            TestSupport.At("c2", SideDefinitions.White, PieceDefinitions.Pawn),
-            TestSupport.At(
-                "d2",
-                SideDefinitions.White,
-                PieceDefinitions.Bishop),
-            TestSupport.At(
-                "e2",
-                SideDefinitions.White,
-                PieceDefinitions.Bishop),
-            TestSupport.At("f2", SideDefinitions.White, PieceDefinitions.Pawn),
-            TestSupport.At("g2", SideDefinitions.White, PieceDefinitions.Pawn),
-            TestSupport.At("h2", SideDefinitions.White, PieceDefinitions.Pawn),
-            TestSupport.At("a1", SideDefinitions.White, PieceDefinitions.Rook),
-            TestSupport.At("e1", SideDefinitions.White, PieceDefinitions.King),
-            TestSupport.At("h1", SideDefinitions.White, PieceDefinitions.Rook));
+        return CreatePerftGame(
+            "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/" +
+            "PPPBBPPP/R3K2R w KQkq - 0 1");
+    }
+
+    private static Game CreatePerftGame(
+        string fen)
+    {
+        var initialState = new FenCodec().Parse(fen);
+
+        return TestSupport.CreateNonTerminatingGame(initialState);
     }
 }

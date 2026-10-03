@@ -116,6 +116,28 @@ internal static class TestSupport
             .CreateGame();
     }
 
+    public static Game CreateNonTerminatingGame(
+        StandardInitialState initialState)
+    {
+        ArgumentNullException.ThrowIfNull(initialState);
+
+        var components = CreateRuleComponents(initialState);
+        var gameStateFactory = new GameStateFactory(
+            BoardTopologyFactory.Create(),
+            TurnOrderDefinition.Instance,
+            initialState.SideToMove,
+            Orientations.Resolver,
+            BoardRegions.Resolver,
+            [.. initialState.Placements]);
+
+        return CreateDefinition(
+                gameStateFactory,
+                components.LegalMoveGenerator,
+                components.ExecutionResolver,
+                new NonTerminatingStatusEvaluator())
+            .CreateGame();
+    }
+
     public static GameVariantDefinition CreateDefinition(
         TurnOrder turnOrder,
         params Placement[] placements)

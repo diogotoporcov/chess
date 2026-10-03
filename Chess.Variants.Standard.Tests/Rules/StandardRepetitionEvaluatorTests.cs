@@ -4,6 +4,7 @@
 using Chess.Core.Games;
 using Chess.Core.Games.Variants;
 using Chess.Core.Movement;
+using Chess.Variants.Standard.Games;
 using Chess.Variants.Standard.Games.History;
 using Chess.Variants.Standard.Movement;
 using Chess.Variants.Standard.Pieces;
@@ -235,6 +236,67 @@ public sealed class StandardRepetitionEvaluatorTests
             Variant.DefaultRepetitionEvaluator.WouldCreateThreefoldRepetition(
                 game.State,
                 doesNotCreateThird));
+        snapshot.AssertMatches(game);
+    }
+
+    [Fact]
+    public void ProspectiveRepetitionDistinguishesLostCastlingRights()
+    {
+        var initialState = TestSupport.CreateInitialState(
+            SideDefinitions.White,
+            [
+                TestSupport.At(
+                    "e1",
+                    SideDefinitions.White,
+                    PieceDefinitions.King),
+                TestSupport.At(
+                    "h1",
+                    SideDefinitions.White,
+                    PieceDefinitions.Rook),
+                TestSupport.At(
+                    "e8",
+                    SideDefinitions.Black,
+                    PieceDefinitions.King)
+            ],
+            new CastlingRights(true, false, false, false));
+        var game = Variant.CreateGame(initialState);
+        var evaluator = TestSupport.CreateRepetitionEvaluator(initialState);
+
+        PlayCastlingRightsCycle(game);
+        TestSupport.Play(game, "h1", "h2");
+        TestSupport.Play(game, "e8", "e7");
+        TestSupport.Play(game, "h2", "h1");
+
+        var snapshot = StandardGameSnapshot.Capture(game);
+        var candidate = TestSupport.FindMove(game, "e7", "e8");
+
+        Assert.False(
+            evaluator.WouldCreateThreefoldRepetition(game.State, candidate));
+        snapshot.AssertMatches(game);
+    }
+
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public void ProspectiveRepetitionUsesOnlyLegalEnPassantAvailability(
+        bool hasLegalEnPassant,
+        bool expectedThreefold)
+    {
+        var initialState = CreateEnPassantIdentityState(hasLegalEnPassant);
+        var game = Variant.CreateGame(initialState);
+        var evaluator = TestSupport.CreateRepetitionEvaluator(initialState);
+
+        PlayKingCycle(game);
+        TestSupport.Play(game, "a1", "a2");
+        TestSupport.Play(game, "h8", "h7");
+        TestSupport.Play(game, "a2", "a1");
+
+        var snapshot = StandardGameSnapshot.Capture(game);
+        var candidate = TestSupport.FindMove(game, "h7", "h8");
+
+        Assert.Equal(
+            expectedThreefold,
+            evaluator.WouldCreateThreefoldRepetition(game.State, candidate));
         snapshot.AssertMatches(game);
     }
 
@@ -478,6 +540,58 @@ public sealed class StandardRepetitionEvaluatorTests
         TestSupport.Play(game, "g8", "f6");
         TestSupport.Play(game, "f3", "g1");
         TestSupport.Play(game, "f6", "g8");
+    }
+
+    private static void PlayCastlingRightsCycle(
+        Game game)
+    {
+        TestSupport.Play(game, "h1", "h2");
+        TestSupport.Play(game, "e8", "e7");
+        TestSupport.Play(game, "h2", "h1");
+        TestSupport.Play(game, "e7", "e8");
+    }
+
+    private static void PlayKingCycle(
+        Game game)
+    {
+        TestSupport.Play(game, "a1", "a2");
+        TestSupport.Play(game, "h8", "h7");
+        TestSupport.Play(game, "a2", "a1");
+        TestSupport.Play(game, "h7", "h8");
+    }
+
+    private static StandardInitialState CreateEnPassantIdentityState(
+        bool hasLegalEnPassant)
+    {
+        var placements = new List<Placement>
+        {
+            TestSupport.At(
+                "a1",
+                SideDefinitions.White,
+                PieceDefinitions.King),
+            TestSupport.At(
+                "h8",
+                SideDefinitions.Black,
+                PieceDefinitions.King),
+            TestSupport.At(
+                "d5",
+                SideDefinitions.Black,
+                PieceDefinitions.Pawn)
+        };
+
+        if (hasLegalEnPassant)
+        {
+            placements.Add(
+                TestSupport.At(
+                    "e5",
+                    SideDefinitions.White,
+                    PieceDefinitions.Pawn));
+        }
+
+        return TestSupport.CreateInitialState(
+            SideDefinitions.White,
+            placements,
+            enPassantTarget: TestSupport.Square("d6"));
     }
 
     private sealed class CountingMoveExecutionResolver(

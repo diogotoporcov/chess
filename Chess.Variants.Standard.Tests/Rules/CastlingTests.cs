@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 using Chess.Core.Games;
+using Chess.Core.Games.Attacks;
 using Chess.Core.Movement;
 using Chess.Variants.Standard.Movement;
 using Chess.Variants.Standard.Pieces;
@@ -149,6 +150,32 @@ public sealed class CastlingTests
                 SideDefinitions.Black,
                 PieceDefinitions.Rook));
 
+        Assert.DoesNotContain(
+            new Move(
+                TestSupport.Square("e1"),
+                TestSupport.Square("g1"),
+                MoveOptions.CastleKingSide),
+            game.GenerateMoves(TestSupport.Square("e1")));
+    }
+
+    [Fact]
+    public void PinnedAttackerOnTransitSquarePreventsCastling()
+    {
+        var game = TestSupport.CreateGame(
+            TestSupport.At("e1", SideDefinitions.White, PieceDefinitions.King),
+            TestSupport.At("h1", SideDefinitions.White, PieceDefinitions.Rook),
+            TestSupport.At("h8", SideDefinitions.Black, PieceDefinitions.King),
+            TestSupport.At(
+                "h2",
+                SideDefinitions.Black,
+                PieceDefinitions.Knight));
+        var attackGenerator = new PatternAttackGenerator();
+
+        Assert.True(
+            attackGenerator.IsSquareAttacked(
+                game.State,
+                TestSupport.Square("f1"),
+                SideDefinitions.Black));
         Assert.DoesNotContain(
             new Move(
                 TestSupport.Square("e1"),
