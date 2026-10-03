@@ -1,4 +1,6 @@
 <Solution>
+  <Project Path="Chess.Analysis/Chess.Analysis.csproj" />
+  <Project Path="Chess.Analysis.Tests/Chess.Analysis.Tests.csproj" />
   <Project Path="Chess.Core/Chess.Core.csproj" />
   <Project Path="Chess.Core.Tests/Chess.Core.Tests.csproj" />
   <Project Path="Chess.Desktop/Chess.Desktop.csproj" />
