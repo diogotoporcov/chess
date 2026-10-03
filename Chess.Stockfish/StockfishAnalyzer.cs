@@ -20,8 +20,11 @@ public sealed class StockfishAnalyzer :
     private readonly UciEngineProcess _engine;
     private readonly StockfishSpinOption _multiPv;
     private readonly SemaphoreSlim _analysisGate = new(1, 1);
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private readonly Lock _lifecycleLock = new();
     private readonly FenCodec _fenCodec = new();
     private readonly UciMoveCodec _moveCodec = new();
+    private Task? _disposeTask;
     private int _disposed;
 
     private StockfishAnalyzer(
@@ -45,6 +48,9 @@ public sealed class StockfishAnalyzer :
             var multiPv = StockfishSpinOption.Require(
                 engine.Info.OptionLines,
                 "MultiPV");
+            StockfishCheckOption.Require(
+                engine.Info.OptionLines,
+                "UCI_Chess960");
             StockfishSpinOption? threads = options.Threads is null
                 ? null
                 : StockfishSpinOption.Require(
@@ -100,43 +106,68 @@ public sealed class StockfishAnalyzer :
         ArgumentNullException.ThrowIfNull(position);
         ArgumentNullException.ThrowIfNull(request);
         ThrowIfDisposed();
-        await _analysisGate.WaitAsync(cancellationToken);
+        using var effectiveCancellation =
+            CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken,
+                _lifetimeCancellation.Token);
+        var entered = false;
         try
         {
+            await _analysisGate.WaitAsync(effectiveCancellation.Token);
+            entered = true;
             ThrowIfDisposed();
             _multiPv.Validate(request.VariationCount, nameof(request));
             await _engine.SetOptionAsync(
                 "MultiPV",
                 request.VariationCount.ToString(CultureInfo.InvariantCulture),
-                cancellationToken);
+                effectiveCancellation.Token);
 
             var fen = _fenCodec.Format(position);
             var initialState = _fenCodec.Parse(fen);
             var search = await _engine.SearchAsync(
                 UciPosition.FromFen(fen),
                 MapLimit(request.Limit),
-                cancellationToken);
-            return Translate(initialState, search);
+                effectiveCancellation.Token);
+            return Translate(initialState, search, request.VariationCount);
+        }
+        catch (OperationCanceledException) when (_lifetimeCancellation
+                                                     .IsCancellationRequested &&
+                                                 !cancellationToken
+                                                     .IsCancellationRequested)
+        {
+            throw new ObjectDisposedException(nameof(StockfishAnalyzer));
         }
         finally
         {
-            _analysisGate.Release();
+            if (entered)
+            {
+                _analysisGate.Release();
+            }
         }
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        Task task;
+        lock (_lifecycleLock)
         {
-            return;
+            if (_disposeTask is null)
+            {
+                Volatile.Write(ref _disposed, 1);
+                _lifetimeCancellation.Cancel();
+                _disposeTask = DisposeCoreAsync();
+            }
+
+            task = _disposeTask;
         }
 
-        await _engine.DisposeAsync();
+        return new ValueTask(task);
     }
 
     private AnalysisResult Translate(
         StandardInitialState initialState,
-        UciSearchResult search)
+        UciSearchResult search,
+        int requestedVariationCount)
     {
         var latest =
             new SortedDictionary<int, StockfishInfoParser.ParsedLine>();
@@ -146,6 +177,19 @@ public sealed class StockfishAnalyzer :
             {
                 latest[parsed.Rank] = parsed;
             }
+        }
+
+        var expectedRank = 1;
+        foreach (var rank in latest.Keys)
+        {
+            if (rank != expectedRank ||
+                rank > requestedVariationCount)
+            {
+                throw new StockfishException(
+                    "Stockfish emitted invalid final MultiPV ranks.");
+            }
+
+            expectedRank++;
         }
 
         var variations = latest
@@ -235,6 +279,13 @@ public sealed class StockfishAnalyzer :
 
         throw new InvalidOperationException(
             "Analysis limit has no supported value.");
+    }
+
+    private async Task DisposeCoreAsync()
+    {
+        await _analysisGate.WaitAsync();
+        _analysisGate.Release();
+        await _engine.DisposeAsync();
     }
 
     private void ThrowIfDisposed()

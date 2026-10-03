@@ -33,10 +33,25 @@ internal static class StockfishInfoParser
 
         var pvIndex = Array.IndexOf(tokens, "pv");
         var end = pvIndex < 0 ? tokens.Length : pvIndex;
-        var scoreIndex = Array.IndexOf(tokens, "score", 0, end);
-        if (scoreIndex < 0)
+        var scoreIndexes = FindIndexes(tokens, end, "score");
+        if (scoreIndexes.Count == 0)
         {
             return null;
+        }
+
+        if (scoreIndexes.Count != 1)
+        {
+            throw new StockfishException(
+                "Stockfish emitted duplicate score fields.");
+        }
+
+        var scoreIndex = scoreIndexes[0];
+
+        if (pvIndex >= 0 &&
+            tokens.Count(token => token == "pv") != 1)
+        {
+            throw new StockfishException(
+                "Stockfish emitted duplicate PV fields.");
         }
 
         if (pvIndex == tokens.Length - 1)
@@ -94,6 +109,13 @@ internal static class StockfishInfoParser
                 "Stockfish emitted negative or excessive analysis metadata.");
         }
 
+        if (selectiveDepth is not null &&
+            depth is null)
+        {
+            throw new StockfishException(
+                "Stockfish emitted selective depth without depth.");
+        }
+
         return new ParsedLine(
             rank,
             score,
@@ -113,11 +135,19 @@ internal static class StockfishInfoParser
         int end,
         string marker)
     {
-        var index = Array.IndexOf(tokens, marker, 0, end);
-        if (index < 0)
+        var indexes = FindIndexes(tokens, end, marker);
+        if (indexes.Count == 0)
         {
             return null;
         }
+
+        if (indexes.Count != 1)
+        {
+            throw new StockfishException(
+                $"Stockfish emitted duplicate {marker} fields.");
+        }
+
+        var index = indexes[0];
 
         if (index + 1 >= end)
         {
@@ -133,11 +163,19 @@ internal static class StockfishInfoParser
         int end,
         string marker)
     {
-        var index = Array.IndexOf(tokens, marker, 0, end);
-        if (index < 0)
+        var indexes = FindIndexes(tokens, end, marker);
+        if (indexes.Count == 0)
         {
             return null;
         }
+
+        if (indexes.Count != 1)
+        {
+            throw new StockfishException(
+                $"Stockfish emitted duplicate {marker} fields.");
+        }
+
+        var index = indexes[0];
 
         if (index + 1 >= end ||
             !long.TryParse(
@@ -151,6 +189,23 @@ internal static class StockfishInfoParser
         }
 
         return value;
+    }
+
+    private static List<int> FindIndexes(
+        string[] tokens,
+        int end,
+        string marker)
+    {
+        var indexes = new List<int>();
+        for (var index = 0; index < end; index++)
+        {
+            if (tokens[index] == marker)
+            {
+                indexes.Add(index);
+            }
+        }
+
+        return indexes;
     }
 
     private static int ParseInt(

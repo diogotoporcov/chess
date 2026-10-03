@@ -36,6 +36,7 @@ internal static class Program
         }
 
         var searchCount = 0;
+        var readyCount = 0;
         var waitingForStop = false;
         var multiPv = 1;
 
@@ -103,9 +104,25 @@ internal static class Program
                                     : "option name MultiPV type spin default 1 min 1 max 5");
                         }
 
-                        await SendAsync(
-                            logPath,
-                            "option name UCI_Chess960 type check default false");
+                        if (scenario != "stockfish no chess960")
+                        {
+                            var chess960 = scenario switch
+                            {
+                                "stockfish duplicate chess960" =>
+                                    "option name UCI_Chess960 type check default false",
+                                "stockfish wrong chess960" =>
+                                    "option name UCI_Chess960 type spin default 0 min 0 max 1",
+                                "stockfish malformed chess960" =>
+                                    "option name UCI_Chess960 type check default maybe",
+                                _ =>
+                                    "option name UCI_Chess960 type check default false"
+                            };
+                            await SendAsync(logPath, chess960);
+                            if (scenario == "stockfish duplicate chess960")
+                            {
+                                await SendAsync(logPath, chess960);
+                            }
+                        }
                     }
 
                     await SendAsync(logPath, "uciok");
@@ -122,6 +139,7 @@ internal static class Program
 
             if (command == "isready")
             {
+                readyCount++;
                 if (scenario == "exit on ready")
                 {
                     await Console.Error.WriteLineAsync("fatal-ready-message");
@@ -132,6 +150,20 @@ internal static class Program
                 if (scenario == "no readyok")
                 {
                     continue;
+                }
+
+                if (scenario == "stockfish no analysis ready" &&
+                    readyCount >= 2)
+                {
+                    continue;
+                }
+
+                if (scenario == "stockfish delayed analysis ready" &&
+                    readyCount == 2 &&
+                    releasePath is not null)
+                {
+                    await LogAsync(logPath, "EVENT analysis-ready-held");
+                    await WaitForFileAsync(releasePath);
                 }
 
                 if (scenario == "delayed ready")
@@ -152,10 +184,51 @@ internal static class Program
                 if (stockfishScenario)
                 {
                     searchCount++;
+                    if (scenario == "stockfish exit on search")
+                    {
+                        await Console.Error.WriteLineAsync(
+                            "fatal-stockfish-search-message");
+                        await Console.Error.FlushAsync();
+                        return 23;
+                    }
+
                     if (scenario == "stockfish wait for stop" &&
                         searchCount == 1)
                     {
                         waitingForStop = true;
+                        continue;
+                    }
+
+                    if (scenario == "stockfish repeated wait for stop" &&
+                        searchCount <= 5)
+                    {
+                        waitingForStop = true;
+                        continue;
+                    }
+
+                    if (scenario == "stockfish ignore stop")
+                    {
+                        waitingForStop = true;
+                        continue;
+                    }
+
+                    if (scenario == "stockfish malformed first" &&
+                        searchCount == 1)
+                    {
+                        await SendAsync(
+                            logPath,
+                            "info depth 10 depth 20 score cp 1 pv e2e4");
+                        await SendAsync(logPath, "bestmove e2e4");
+                        continue;
+                    }
+
+                    if (scenario == "stockfish invalid pv first" &&
+                        searchCount == 1)
+                    {
+                        await SendAsync(
+                            logPath,
+                            "info score cp 1 pv e2e4 e7e5 e2e5 more");
+                        await SendAsync(logPath, "bestmove e2e4");
                         continue;
                     }
 
@@ -267,6 +340,11 @@ internal static class Program
             {
                 if (stockfishScenario)
                 {
+                    if (scenario == "stockfish ignore stop")
+                    {
+                        continue;
+                    }
+
                     waitingForStop = false;
                     await SendAsync(logPath, "bestmove e2e4");
                     continue;
@@ -287,6 +365,13 @@ internal static class Program
                 if (scenario == "ignore quit")
                 {
                     continue;
+                }
+
+                if (scenario == "stockfish held quit" &&
+                    releasePath is not null)
+                {
+                    await LogAsync(logPath, "EVENT shutdown-held");
+                    await WaitForFileAsync(releasePath);
                 }
 
                 await LogAsync(logPath, "EVENT graceful-exit");

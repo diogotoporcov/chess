@@ -78,6 +78,14 @@ public sealed class StockfishInfoParserTests
     }
 
     [Fact]
+    public void InfoStringContainingRecognizedMarkersIsIgnored()
+    {
+        Assert.Null(
+            StockfishInfoParser.Parse(
+                "info string depth 20 score cp 100 pv e2e4"));
+    }
+
+    [Fact]
     public void MissingMultiPvDefaultsToRankOne()
     {
         var line = StockfishInfoParser.Parse("info depth 0 score mate 0");
@@ -106,5 +114,44 @@ public sealed class StockfishInfoParserTests
     {
         Assert.Throws<StockfishException>(() =>
             StockfishInfoParser.Parse(line));
+    }
+
+    [Theory]
+    [InlineData("depth 10 depth 20")]
+    [InlineData("depth 10 seldepth 15 seldepth 16")]
+    [InlineData("multipv 1 multipv 2")]
+    [InlineData("nodes 10 nodes 20")]
+    [InlineData("time 10 time 20")]
+    [InlineData("score cp 10 score cp 20")]
+    public void RejectsDuplicateRecognizedFields(
+        string metadata)
+    {
+        Assert.Throws<StockfishException>(() =>
+            StockfishInfoParser.Parse($"info {metadata} score cp 1"));
+    }
+
+    [Fact]
+    public void RejectsSelectiveDepthWithoutDepth()
+    {
+        Assert.Throws<StockfishException>(() =>
+            StockfishInfoParser.Parse("info seldepth 20 score cp 10"));
+    }
+
+    [Fact]
+    public void RejectsMultiplePvMarkers()
+    {
+        Assert.Throws<StockfishException>(() =>
+            StockfishInfoParser.Parse(
+                "info depth 10 score cp 1 pv e2e4 pv e7e5"));
+    }
+
+    [Fact]
+    public void TokensAfterPvRemainMoveTokens()
+    {
+        var line = StockfishInfoParser.Parse(
+            "info depth 10 score cp 1 pv e2e4 depth score time multipv");
+        Assert.Equal(
+            ["e2e4", "depth", "score", "time", "multipv"],
+            line!.PvTokens);
     }
 }

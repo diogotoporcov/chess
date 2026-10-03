@@ -238,6 +238,54 @@ public sealed class StockfishAnalyzerTests
         Assert.IsType<FormatException>(exception.InnerException);
     }
 
+    [Fact]
+    public async Task LongPrincipalVariationUsesSuccessivePositions()
+    {
+        string[] tokens =
+        [
+            "e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "a7a6", "b5a4", "g8f6",
+            "e1g1", "f8e7"
+        ];
+        await using var host = new TestEngineHost();
+        host.SetResponse(
+            $"info depth 10 score cp 25 pv {string.Join(' ', tokens)}",
+            "bestmove e2e4");
+        await using var analyzer = await StockfishAnalyzer.StartAsync(
+            host.CreateOptions(),
+            TestContext.Current.CancellationToken);
+        var result = await analyzer.AnalyzeAsync(
+            PositionFacts.FromFen(StartFen),
+            Request(),
+            TestContext.Current.CancellationToken);
+        var game = Variant.CreateGame();
+        var codec = new UciMoveCodec();
+        var variation = Assert.Single(result.Variations);
+        Assert.Equal(tokens.Length, variation.PrincipalVariation.Count);
+        for (var index = 0; index < tokens.Length; index++)
+        {
+            var expected = codec.Parse(game, tokens[index]);
+            Assert.Equal(expected, variation.PrincipalVariation[index]);
+            game.Execute(expected);
+        }
+    }
+
+    [Fact]
+    public async Task AnalysisLeavesPositionFactsUnchanged()
+    {
+        var facts = PositionFacts.FromFen(StartFen);
+        var codec = new FenCodec();
+        var before = codec.Format(facts);
+        await using var host = new TestEngineHost();
+        await using var analyzer = await StockfishAnalyzer.StartAsync(
+            host.CreateOptions(),
+            TestContext.Current.CancellationToken);
+        await analyzer.AnalyzeAsync(
+            facts,
+            Request(),
+            TestContext.Current.CancellationToken);
+        Assert.Equal(before, codec.Format(facts));
+    }
+
     private static AnalysisRequest Request(
         int variationCount = 1)
     {

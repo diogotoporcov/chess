@@ -33,7 +33,9 @@ internal sealed class TestEngineHost : IAsyncDisposable
         File.WriteAllLines(ResponsePath, lines);
     }
 
-    public UciEngineProcessOptions CreateProcessOptions()
+    public UciEngineProcessOptions CreateProcessOptions(
+        TimeSpan? responseTimeout = null,
+        TimeSpan? shutdownTimeout = null)
     {
         var hostPath = Environment.GetEnvironmentVariable("DOTNET_HOST_PATH");
         if (string.IsNullOrWhiteSpace(hostPath))
@@ -52,16 +54,18 @@ internal sealed class TestEngineHost : IAsyncDisposable
                 ReleasePath, _directory, ResponsePath
             ],
             _directory,
-            TimeSpan.FromSeconds(5),
-            TimeSpan.FromMilliseconds(500));
+            responseTimeout ?? TimeSpan.FromSeconds(5),
+            shutdownTimeout ?? TimeSpan.FromMilliseconds(500));
     }
 
     public StockfishAnalyzerOptions CreateOptions(
         int? threads = null,
-        int? hashSizeMiB = null)
+        int? hashSizeMiB = null,
+        TimeSpan? responseTimeout = null,
+        TimeSpan? shutdownTimeout = null)
     {
         return new StockfishAnalyzerOptions(
-            CreateProcessOptions(),
+            CreateProcessOptions(responseTimeout, shutdownTimeout),
             threads,
             hashSizeMiB);
     }
@@ -91,12 +95,58 @@ internal sealed class TestEngineHost : IAsyncDisposable
     public async Task WaitForLogLineAsync(
         string expected)
     {
-        using var timeout =
-            new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        while (!ReadLogLines()
-                   .Contains(expected, StringComparer.Ordinal))
+        await WaitForLogLineCountAsync(expected, 1);
+    }
+
+    public async Task WaitForLogLineCountAsync(
+        string expected,
+        int count)
+    {
+        if (ReadLogLines()
+                .Count(line => line == expected) >=
+            count)
         {
-            await Task.Delay(10, timeout.Token);
+            return;
+        }
+
+        var completion = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var watcher = new FileSystemWatcher(_directory);
+        using (watcher)
+        {
+            watcher.Filter = Path.GetFileName(LogPath);
+            watcher.NotifyFilter = NotifyFilters.FileName |
+                                   NotifyFilters.LastWrite |
+                                   NotifyFilters.Size;
+
+            void CheckLog(
+                object? sender,
+                FileSystemEventArgs arguments)
+            {
+                try
+                {
+                    if (ReadLogLines()
+                            .Count(line => line == expected) >=
+                        count)
+                    {
+                        completion.TrySetResult();
+                    }
+                }
+                catch (IOException)
+                {
+                }
+            }
+
+            watcher.Changed += CheckLog;
+            watcher.Created += CheckLog;
+            watcher.EnableRaisingEvents = true;
+            CheckLog(
+                null,
+                new FileSystemEventArgs(
+                    WatcherChangeTypes.All,
+                    _directory,
+                    Path.GetFileName(LogPath)));
+            await completion.Task.WaitAsync(TimeSpan.FromSeconds(5));
         }
     }
 
